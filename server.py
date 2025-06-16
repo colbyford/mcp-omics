@@ -1,12 +1,11 @@
-from fastmcp import MCPServer
+from fastmcp import FastMCP
 import httpx
 
-## Create MCP server
-server = MCPServer()
+server = FastMCP("mcp-omics")
 
 
 ## ChEMBL Method
-@server.method()
+@server.tool()
 async def get_chembl_info(chembl_id: str) -> dict:
     """Fetch basic compound metadata using a ChEMBL ID."""
     base_url = "https://www.ebi.ac.uk/chembl/api/data"
@@ -31,7 +30,7 @@ async def get_chembl_info(chembl_id: str) -> dict:
     }
 
 ## PDB Method
-@server.method()
+@server.tool()
 async def get_protein_info(pdb_id: str) -> dict:
     """Fetch basic metadata for a protein using its PDB ID."""
     async with httpx.AsyncClient() as client:
