@@ -48,6 +48,32 @@ async def get_protein_info(pdb_id: str) -> dict:
         "release_date": data.get("rcsb_accession_info", {}).get("initial_release_date", "Unknown")
     }
 
+## DrugBank Method
+@server.tool()
+async def get_drugbank_info(drugbank_id: str) -> dict:
+    """Fetch basic drug metadata using a DrugBank ID."""
+    base_url = "https://go.drugbank.com/releases/latest"
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{base_url}/xml/drug/{drugbank_id}")
+
+    if response.status_code != 200:
+        return {"error": f"DrugBank ID '{drugbank_id}' not found."}
+
+    # Parse XML response
+    from xml.etree import ElementTree as ET
+    root = ET.fromstring(response.content)
+
+    drug_info = {
+        "name": root.findtext(".//name"),
+        "description": root.findtext(".//description"),
+        "cas_number": root.findtext(".//cas-number"),
+        "atc_codes": [atc.text for atc in root.findall(".//atc-code")],
+        "groups": [group.text for group in root.findall(".//group")]
+    }
+
+    return drug_info
+
 ## Run the MCP server
 if __name__ == "__main__":
     server.run()
