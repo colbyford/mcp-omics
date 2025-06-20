@@ -74,6 +74,27 @@ async def get_drugbank_info(drugbank_id: str) -> dict:
 
     return drug_info
 
+## PubChem Method
+@server.tool()
+async def get_pubchem_info(pubchem_id: str) -> dict:
+    """Fetch basic compound metadata using a PubChem CID."""
+    base_url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid"
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{base_url}/{pubchem_id}/JSON")
+
+    if response.status_code != 200:
+        return {"error": f"PubChem CID '{pubchem_id}' not found."}
+
+    data = response.json()
+    compound = data.get("PC_Compounds", [{}])[0]
+
+    return {
+        "name": compound.get("props", [{}])[0].get("value", {}).get("sval", "Unknown"),
+        "molecular_weight": compound.get("props", [{}])[1].get("value", {}).get("fval", "Unknown"),
+        "smiles": compound.get("props", [{}])[2].get("value", {}).get("sval", "Unknown")
+    }
+
 ## Run the MCP server
 if __name__ == "__main__":
     server.run()
