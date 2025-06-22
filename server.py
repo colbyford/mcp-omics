@@ -7,7 +7,12 @@ server = FastMCP("mcp-omics")
 ## ChEMBL Method
 @server.tool()
 async def get_chembl_info(chembl_id: str) -> dict:
-    """Fetch basic compound metadata using a ChEMBL ID."""
+    """
+    Fetch compound metadata using a ChEMBL ID.
+    Example: 'CHEMBL25'
+    This function retrieves the compound's preferred name, molecular weight,
+    structure (SMILES), mechanism of action, and target information.
+    """
     base_url = "https://www.ebi.ac.uk/chembl/api/data"
 
     async with httpx.AsyncClient() as client:
@@ -32,7 +37,12 @@ async def get_chembl_info(chembl_id: str) -> dict:
 ## PDB Method
 @server.tool()
 async def get_protein_info(pdb_id: str) -> dict:
-    """Fetch basic metadata for a protein using its PDB ID."""
+    """
+    Fetch information about a protein using its PDB ID.
+    Example: '7WRL'.
+    This function retrieves the protein's title, experimental method,
+    resolution, and release date.
+    """
     async with httpx.AsyncClient() as client:
         url = f"https://data.rcsb.org/rest/v1/core/entry/{pdb_id}"
         response = await client.get(url)
@@ -51,7 +61,7 @@ async def get_protein_info(pdb_id: str) -> dict:
 ## DrugBank Method
 @server.tool()
 async def get_drugbank_info(drugbank_id: str) -> dict:
-    """Fetch basic drug metadata using a DrugBank ID."""
+    """Fetch drug metadata using a DrugBank ID."""
     base_url = "https://go.drugbank.com/releases/latest"
 
     async with httpx.AsyncClient() as client:
@@ -77,7 +87,11 @@ async def get_drugbank_info(drugbank_id: str) -> dict:
 ## PubChem Method
 @server.tool()
 async def get_pubchem_info(pubchem_id: str) -> dict:
-    """Fetch basic compound metadata using a PubChem CID."""
+    """
+    Fetch basic compound information using a PubChem CID.
+    Example: '2244' for caffeine.
+    This function retrieves the compound's name, molecular weight, and SMILES representation.
+    """
     base_url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid"
 
     async with httpx.AsyncClient() as client:
