@@ -2,6 +2,7 @@ from fastmcp import FastMCP
 import httpx
 
 server = FastMCP("mcp-omics")
+headers = {"Accept": "application/json"}
 
 
 ## ChEMBL Method
@@ -17,28 +18,17 @@ async def get_chembl_info(chembl_id: str) -> dict:
 
     async with httpx.AsyncClient() as client:
         # Get compound info
-        compound_resp = await client.get(f"{base_url}/molecule/{chembl_id}")
+        compound_resp = await client.get(f"{base_url}/molecule/{chembl_id}", headers=headers)
         if compound_resp.status_code != 200:
             return {"error": f"Compound {chembl_id} not found."}
-        compound = compound_resp.json()
 
-        # Optionally get mechanism of action
-        moa_resp = await client.get(f"{base_url}/mechanism?molecule_chembl_id={chembl_id}")
-        moa = moa_resp.json().get("mechanisms", [])
-
-    return {
-        "pref_name": compound.get("pref_name"),
-        "molecular_weight": compound.get("molecule_properties", {}).get("full_molweight"),
-        "structure": compound.get("molecule_structures", {}).get("canonical_smiles"),
-        "mechanism_of_action": moa[0].get("mechanism_of_action") if moa else None,
-        "target_name": moa[0].get("target_chembl_id") if moa else None
-    }
+    return compound_resp.json()
 
 ## PDB Method
 @server.tool()
-async def get_protein_info(pdb_id: str) -> dict:
+async def get_pdb_info(pdb_id: str) -> dict:
     """
-    Fetch information about a protein using its PDB ID.
+    Fetch information about a protein from the Protein Data Bank using its PDB ID.
     Example: '7WRL'.
     This function retrieves the protein's title, experimental method,
     resolution, and release date.
@@ -58,31 +48,25 @@ async def get_protein_info(pdb_id: str) -> dict:
         "release_date": data.get("rcsb_accession_info", {}).get("initial_release_date", "Unknown")
     }
 
-## DrugBank Method
+## HUGO Gene Method
 @server.tool()
-async def get_drugbank_info(drugbank_id: str) -> dict:
-    """Fetch drug metadata using a DrugBank ID."""
-    base_url = "https://go.drugbank.com/releases/latest"
+async def get_gene_info(gene_symbol: str) -> dict:
+    """
+    Fetch gene information from HUGO.
+    Example: 'BRCA1'.
+    This function retrieves the gene's name, description, and other IDs.
+    """
+    base_url = "https://rest.genenames.org/fetch/symbol"
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{base_url}/xml/drug/{drugbank_id}")
+        response = client.get(f"{base_url}/{gene_symbol}", headers=headers)
 
     if response.status_code != 200:
-        return {"error": f"DrugBank ID '{drugbank_id}' not found."}
+        return {"error": f"HUGO Symbol '{gene_symbol}' not found."}
 
-    # Parse XML response
-    from xml.etree import ElementTree as ET
-    root = ET.fromstring(response.content)
+    gene_info = response.json()
 
-    drug_info = {
-        "name": root.findtext(".//name"),
-        "description": root.findtext(".//description"),
-        "cas_number": root.findtext(".//cas-number"),
-        "atc_codes": [atc.text for atc in root.findall(".//atc-code")],
-        "groups": [group.text for group in root.findall(".//group")]
-    }
-
-    return drug_info
+    return gene_info
 
 ## PubChem Method
 @server.tool()
@@ -100,14 +84,38 @@ async def get_pubchem_info(pubchem_id: str) -> dict:
     if response.status_code != 200:
         return {"error": f"PubChem CID '{pubchem_id}' not found."}
 
-    data = response.json()
-    compound = data.get("PC_Compounds", [{}])[0]
+    compound_info = response.json()
 
-    return {
-        "name": compound.get("props", [{}])[0].get("value", {}).get("sval", "Unknown"),
-        "molecular_weight": compound.get("props", [{}])[1].get("value", {}).get("fval", "Unknown"),
-        "smiles": compound.get("props", [{}])[2].get("value", {}).get("sval", "Unknown")
+    return compound_info
+
+@server.tool()
+async def get_uniprot_info(uniprot_id: str) -> dict:
+    """
+    Fetch basic protein information using a UniProt ID.
+    Example: 'P43220' for the GLP-1 Receptor.
+    This function retrieves the protein name and function information.
+    """
+    base_url = "https://rest.uniprot.org/uniprotkb"
+
+    params = {
+        "fields": [
+            "accession",
+            "protein_name",
+            "cc_function",
+            "ft_binding"
+        ]
     }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{base_url}/{uniprot_id}", headers=headers, params=params)
+
+    if response.status_code != 200:
+        return {"error": f"UniProt ID '{uniprot_id}' not found."}
+
+    uniprot_info = response.json()
+
+    return uniprot_info
+
 
 ## Run the MCP server
 if __name__ == "__main__":
