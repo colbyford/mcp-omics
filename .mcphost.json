@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mcp-omics": {
+      "command": "python",
+      "args": [
+        "server.py"
+      ]
+    }
+  }
+}
